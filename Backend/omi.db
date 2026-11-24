@@ -1,0 +1,384 @@
+# TalkReady – BACKEND Phased Prompts (Node.js + Express + MongoDB)
+
+For the backend developer. Use these prompts one phase at a time with your AI coding assistant. Always attach `00_SHARED_API_CONTRACT.md` together with each prompt.
+
+---
+
+## HOW TO USE THIS FILE
+
+1. Paste **PART A (Master Prompt)** once at the start of the session.
+2. Then paste **one phase prompt at a time**, in order (Phase 0 → Phase 8).
+3. After each phase the assistant must stop, give the report, and wait. Test the phase yourself (Postman) before starting the next one.
+4. Never skip a phase: later phases depend on earlier ones.
+
+Note: there is no existing code (no GitHub repository yet). This is a fresh project. The backend lives in the `backend/` folder of the `TalkReady` repository.
+
+---
+
+# PART A – MASTER PROMPT (paste once)
+
+```
+You are a Senior Node.js/Express/MongoDB backend engineer and API architect.
+
+PROJECT: TalkReady – an offline-first mock interview application for students and job seekers. You are building ONLY the BACKEND (REST API). A different developer builds the React frontend on another laptop, so the API must match the attached API contract (00_SHARED_API_CONTRACT.md) EXACTLY: same paths, methods, field names, enums, status codes and response format.
+
+TECH STACK (do not add other major libraries without telling me why):
+- Node.js (LTS), Express.js, MongoDB, Mongoose
+- Auth: JWT (jsonwebtoken) + bcryptjs
+- Validation: express-validator (or zod – pick one and use it everywhere)
+- Security: helmet, cors (configurable origins), express-rate-limit
+- Uploads: multer; text extraction: pdf-parse (PDF) and mammoth (DOCX)
+- PDF reports: pdfkit
+- Logging: morgan (+ a small logger util)
+- Tests: jest + supertest + mongodb-memory-server
+- Config: dotenv
+
+ARCHITECTURE: MVC with a service layer.
+backend/
+  config/ (db.js, env.js, constants.js)
+  controllers/  (thin: read request, call service, send response)
+  services/     (business logic: auth, scoring, question selection, report, resume parsing)
+  models/       (Mongoose schemas)
+  routes/       (one file per module + routes/index.js)
+  middleware/   (auth, role, validate, error handler, upload, rate limit, notFound)
+  validators/   (request validation per module)
+  utils/        (ApiError, asyncHandler, response helpers, pagination helper)
+  seeders/      (questions, categories, roles, skills, admin user)
+  tests/
+  uploads/      (gitignored, resume files)
+  server.js, app.js (app separate from server so tests can import app)
+
+NON-NEGOTIABLE RULES
+1. Follow the API contract exactly. If something in the contract is unclear or wrong, STOP and ask me; do not invent a different API.
+2. Every response uses { success, message, data } / { success:false, message, errors:[] }. Use shared helpers; never hand-write response objects in controllers.
+3. All async handlers wrapped (asyncHandler); one central error handler. Never return stack traces to the client. Log them on the server only.
+4. Every endpoint validates input and returns 400 with a field-level errors array.
+5. Ownership: users can only read/change their own interviews, answers, reports, notes, resumes, settings. Another user's record returns 404.
+6. Never return passwordHash, tokenVersion, JWT secret or internal fields. Use a toJSON transform: _id → id, remove __v.
+7. Register static routes before dynamic ones (/questions/categories before /questions/:id, /reports/progress before /reports/:id).
+8. Never hardcode categories, roles, skills or questions inside controllers. Enums come from config/constants.js; roles/skills/questions come from the database (seeded).
+9. Core interview scoring must work WITHOUT any external AI service (deterministic rule-based). Label results with evaluation method "rule-based-v1". Never claim AI was used.
+10. No secrets in code. Provide .env.example. .gitignore must include .env, node_modules, uploads/.
+11. Do not add dummy/fake endpoints, empty controllers or TODO-only files. Every route file you create must be wired and working.
+12. Do not claim something works unless you actually ran it. Do not fabricate test results. If you cannot run something, say so.
+
+WORKING STYLE FOR EVERY PHASE
+- Start by listing the files you will create/change and the endpoints covered.
+- Implement the phase completely.
+- Then run: npm install (if needed), the server, and the tests for this phase. Fix every error before reporting.
+- Finish with a report: files created/modified, endpoints done, how to test (Postman examples), test results (real output), known issues.
+- STOP after the report and wait for me to say "continue".
+
+Reply "Ready" and wait for Phase 0.
+```
+
+---
+
+# PART B – PHASE PROMPTS
+
+## PHASE 0 – Project setup, foundation, health endpoints
+
+**What this phase gives you:** a running Express server connected to MongoDB, with the shared building blocks (response helpers, error handling, config) that every later phase uses.
+
+**How it should work:** `npm run dev` starts the server; `GET /api/health` and `GET /api/health/database` respond correctly; unknown routes return a JSON 404; a thrown error returns the standard error JSON.
+
+```
+PHASE 0 – FOUNDATION (Endpoints 54, 55)
+
+Create the backend/ project from scratch following the architecture in the master prompt.
+
+Tasks:
+1. Initialise package.json with scripts: "dev" (nodemon), "start", "test", "seed".
+2. config/env.js: load and validate env vars (PORT, MONGODB_URI, JWT_SECRET, JWT_EXPIRES_IN, CLIENT_URL, NODE_ENV, MAX_FILE_SIZE_MB). Fail fast with a clear message if JWT_SECRET or MONGODB_URI is missing.
+3. config/db.js: connect with Mongoose, log success/failure, handle disconnect events.
+4. config/constants.js: all shared enums from the contract (roles, categories, difficulties, interview modes/styles/status, languages, themes, evaluation methods, answer status/source).
+5. utils: ApiError (statusCode, message, errors), asyncHandler, response helpers (sendSuccess, sendCreated, sendPaginated, sendError), pagination helper (parse page/limit, build pagination object).
+6. middleware: notFound (JSON 404), errorHandler (handles ApiError, Mongoose ValidationError, CastError (bad ObjectId → 404/400), duplicate key 11000 → 409, JWT errors → 401, Multer errors → 413/415, default 500 with generic message), rateLimiter (general limiter now; stricter auth limiter used later).
+7. app.js: helmet, cors (origin from CLIENT_URL, allow Authorization header), express.json (limit 1mb), morgan, mount /api routes, notFound, errorHandler.
+8. server.js: connect DB then listen. Graceful shutdown.
+9. routes/health.routes.js + controller: Endpoints 54 and 55 exactly as in contract (503 when DB not connected, use mongoose.connection.readyState).
+10. .env.example, .gitignore, README section "Backend setup".
+11. Tests: health endpoints (200), unknown route (404 JSON), error handler format.
+
+Acceptance criteria:
+- npm run dev starts without warnings.
+- GET /api/health → 200 with the contract shape.
+- GET /api/health/database → 200 when Mongo is up, 503 when down (stop Mongo and verify).
+- GET /api/unknown → { success:false, message:"Route not found", errors:[] } with 404.
+- Tests pass (show real output).
+```
+
+---
+
+## PHASE 1 – Authentication (Endpoints 1–5)
+
+**How it works:** a user registers with name/email/password. The password is hashed with bcrypt. Login verifies credentials and returns a JWT. Every protected request sends `Authorization: Bearer <token>`; middleware verifies it and loads the user. Logout increments `tokenVersion`, which invalidates all previously issued tokens.
+
+**How it should behave:** wrong credentials always return the same message (no hint whether the email exists). Duplicate email → 409. Expired/invalid token → 401. Passwords are never returned.
+
+```
+PHASE 1 – AUTHENTICATION (Endpoints 1–5)
+
+Build the User model, auth service, controller, validators, routes and middleware.
+
+User model fields: name, email (unique, lowercase, indexed), passwordHash (select:false), role (student|admin, default student), tokenVersion (number, default 0), profile fields (education, experience, jobRole, careerGoal, skills[]) and preferences object (as in contract Profile shape, with sensible defaults), timestamps. Include the toJSON transform.
+
+Tasks:
+1. Endpoint 1 POST /api/auth/register – validation per contract, hash password (bcrypt, cost 10–12), create user with role "student" ALWAYS (never accept role from the body), return { user, token } with 201.
+2. Endpoint 2 POST /api/auth/login – verify, return { user, token }. Same 401 message for unknown email and wrong password. Apply the strict auth rate limiter (e.g. 10 attempts / 15 min per IP).
+3. Endpoint 3 POST /api/auth/logout – protected; increment tokenVersion.
+4. Endpoint 4 GET /api/auth/me – protected; returns user.
+5. Endpoint 5 PUT /api/auth/change-password – verify current password, validate new (≥8, letter+number, different from old), save, increment tokenVersion and return a fresh token in data.token so the client stays logged in.
+6. middleware/auth.js (protect): read Bearer token, verify, load user, reject if tokenVersion mismatch or user missing (401 with clear message "Session expired, please log in again").
+7. middleware/role.js (authorize('admin')) – used later in admin phase.
+8. JWT payload: { sub: userId, tv: tokenVersion }. Never put email/role secrets that can go stale; role is read from DB on each request.
+9. Seeder for an admin user from env ADMIN_EMAIL / ADMIN_PASSWORD (do not hardcode credentials; skip if env missing).
+10. Tests (supertest): register success, register duplicate (409), register weak password (400), login success, login wrong password (401), me without token (401), me with token (200), logout invalidates old token, change-password flows, role cannot be injected on register.
+
+Acceptance criteria:
+- All 5 endpoints match the contract (paths, bodies, status codes, response shapes).
+- passwordHash/tokenVersion never appear in any response.
+- Old token returns 401 after logout.
+- Tests pass (show real output).
+```
+
+---
+
+## PHASE 2 – Profile and Settings (Endpoints 6–10, 47–49)
+
+**How it works:** the profile lives on the user document; settings live in a separate Settings document created on first access with defaults. Deleting the profile deletes the account and everything owned; deleting settings data wipes learning data but keeps the account.
+
+**How it should behave:** partial updates only change the provided fields; invalid enum values are rejected; destructive actions require confirmation.
+
+```
+PHASE 2 – PROFILE & SETTINGS (Endpoints 6, 7, 8, 9, 10, 47, 48, 49)
+
+Tasks:
+1. Profile endpoints 6–9 exactly per contract. Skills: trim, de-duplicate (case-insensitive), max 30. Preferences validated against enums in constants.js.
+2. Settings model: user (ref, unique), language, theme, interviewPreferences, offline { autoSync, keepRecordings }, notifications, timestamps. GET /api/settings creates defaults if none exist. PUT validates enums and merges partial updates (nested objects merge, not overwrite).
+3. Endpoint 10 DELETE /api/profile: require { password }, verify, then delete: user, settings, and (via a service function deleteAllUserData(userId) that later phases extend) interviews, answers, reports, notes, resumes (+ files on disk). Run inside a clean sequence and return 200.
+4. Endpoint 49 DELETE /api/settings/data: require { confirm: "DELETE" }, call the same deleteAllUserData service but KEEP the user account and settings; return counts per collection that existed at this point. (Collections not created yet must be handled gracefully – the service should register collections via a list so later phases simply add theirs.)
+5. Tests: profile get/update, skills de-dup, invalid preference rejected, settings defaults, settings partial update merges nested, delete profile wrong password (401), delete profile success removes user (login then fails), delete data keeps account.
+
+Acceptance criteria:
+- A new user can GET /api/settings and receive defaults.
+- Partial PUT does not erase untouched nested keys.
+- Account deletion truly removes the user; data deletion keeps the user.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 3 – Question bank, seed data, generation (Endpoints 15–21) and Admin question management (Endpoints 50–53)
+
+**How it works:** questions are stored in MongoDB (not hardcoded). Categories, roles and skills are collections seeded from data files so the UI can fetch them. `generate` builds a question set by (1) taking matching questions from the bank, (2) turning note/resume content into questions using templates, (3) filling gaps with template questions. Admin endpoints create/update/delete questions.
+
+**How it should behave:** filters combine (category + role + difficulty + skill + language + search). Random returns no duplicates. Generated questions never repeat within one request. Admin endpoints are blocked for students with 403.
+
+```
+PHASE 3 – QUESTIONS & ADMIN (Endpoints 15–21, 50–53)
+
+Models: Question, Category (key, label, description), Role (key, label), Skill (key, label, jobRoles[]). (Name the role model JobRole.) Index Question on category, jobRole, skill, difficulty, language, isActive, and a text index on text/tags/keywords.
+
+Seed data (seeders/): create real, useful interview data in JSON files, not placeholders:
+- 5 categories (hr, technical, general, communication, coding), roles (Java Developer, Python Developer, Web Developer, Software Engineer, Data Analyst, General/Fresher), skills (Java, OOP, Python, JavaScript, React, Node.js, SQL, DSA, HTML/CSS, Git, Communication, Problem Solving …).
+- At least 120 questions in English across all categories/roles/difficulties (minimum 5 per category-difficulty), each with expectedAnswer, keywords (4–8), evaluationCriteria, timeLimitSeconds. Add 10+ Telugu and 10+ Hindi questions (language te/hi) so multi-language works end-to-end.
+- Seeder must be idempotent (running twice does not create duplicates; use a stable seedKey or upsert on text+category).
+
+Tasks:
+1. Endpoints 15–19, 21 as in contract. List supports pagination, filters and search. /random supports count 1–20, same filters, uses MongoDB $sample or equivalent, no duplicates.
+2. Endpoint 20 POST /api/questions/generate: implement services/questionGenerator.js
+   - Step 1: select from bank by filters (+ skills[]).
+   - Step 2: if noteId is given (must be owned by user – the Notes model comes in Phase 6, so make this branch work via a small adapter that returns nothing until then, and wire it fully in Phase 6) extract key sentences/terms and build template questions ("Explain <term> in your own words", "What is <definition-term>?"). Mark source "notes".
+   - Step 3: same for resumeId (skills/projects) → "Tell me about your project <name>", "How have you used <skill>?" source "resume".
+   - Step 4: fill any shortage with generic template questions for the category/role (source "template").
+   - Return exactly `count` questions when possible, no duplicates, plus the `sources` counts. If it cannot reach the count return what it has and a message saying how many.
+3. Admin endpoints 50–53 with protect + authorize('admin'): validate full Question body (text 10–500 chars, enums valid, keywords array, etc.). On create/update, auto-create the Category/JobRole/Skill value if new. Delete: soft delete (isActive:false) if the question appears in any interview, otherwise hard delete (the Interview model arrives in Phase 4 – write this check so it works once the model exists and does not crash before).
+4. Endpoint 50 dashboard counts via aggregation.
+5. Tests: list filters, search, pagination, /categories before /:id works (no CastError), random no duplicates, generate counts, student gets 403 on admin routes, admin CRUD, invalid body 400, seeder idempotent.
+
+Acceptance criteria:
+- npm run seed fills the DB; running it again changes nothing.
+- GET /api/questions/categories returns counts that match the database.
+- Student token on /api/admin/* → 403; no token → 401.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 4 – Interviews lifecycle (Endpoints 22–29)
+
+**How it works:** creating an interview selects/generates questions and stores a frozen copy (`questions` snapshot) so later edits to the bank never change an old interview. The interview moves through a state machine: `draft → in_progress ⇄ paused → completed`. Progress (currentIndex, elapsedSeconds) is autosaved with PUT.
+
+**How it should behave:** invalid transitions return 400 with a clear message; `clientId` makes creation idempotent so offline sync can be retried safely; completing twice is harmless.
+
+```
+PHASE 4 – INTERVIEWS (Endpoints 22–29)
+
+Interview model per contract Interview shape: user (ref, indexed), clientId (string, sparse unique index per user: unique on {user, clientId}), setup fields, questions (embedded snapshot array with questionId, text, expectedAnswer, keywords, timeLimitSeconds, skill, difficulty, source), status, currentIndex, elapsedSeconds, startedAt, pausedAt, completedAt, totalScore, reportId, timestamps. Index {user, createdAt:-1}.
+
+Tasks:
+1. Endpoint 22 POST /api/interviews: validate setup values (duration ∈ 5/10/15/30, questionCount ∈ 5/10/15, enums), call the question generator from Phase 3 (use bank + noteId/resumeId if provided), freeze snapshot, status "draft". If clientId exists for the user return the existing interview with 200. If fewer questions than requested exist, still create but only if at least 1 is available, and include `warnings` in message; if zero, return 400.
+   - Interview style effects: "rapid-fire" shortens each question's timeLimitSeconds (×0.5), "strict" keeps the limit, "friendly" and "standard" keep the limit but are stored for feedback tone later.
+2. Endpoints 23–26: list (filters, pagination, summary projection without the full questions array), get (full), PUT autosave (only allowed fields, only when not completed), DELETE (cascade: answers; report/evaluation – write the cascade using a registry function like Phase 2's so later phases add their models).
+3. Endpoints 27–29: state machine in services/interviewService.js with a single function per transition. Return 400 "Cannot start a completed interview" etc. Pause stores elapsedSeconds. Start from paused = resume.
+4. Endpoint 29 complete: for now (Answers arrive in Phase 5) mark completed, fill skipped answers placeholder logic behind a function that Phase 5 will implement; make the endpoint work now with zero answers (totalScore 0) and be idempotent. Phase 5 will plug in evaluation and report creation.
+5. Update deleteAllUserData and the admin soft-delete check from earlier phases to include interviews.
+6. Tests: create (valid/invalid), idempotent clientId, list only own interviews (second user cannot see/get → 404), full state machine happy path, every invalid transition, autosave, delete cascade, completed twice idempotent.
+
+Acceptance criteria:
+- A full create → start → pause → start → complete flow works in Postman.
+- User B cannot access User A's interview (404).
+- Questions snapshot stays unchanged after editing the bank question (test it).
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 5 – Answers and the scoring engine (Endpoints 30–34) – the core of the app
+
+**How it works:** each answer is stored against an interview question and immediately evaluated by a deterministic scoring service (rules in section 4 of the contract). Evaluating the full interview aggregates answer scores into the interview total and creates/updates the Report. Retry stores a new attempt and keeps the previous score so the student can compare.
+
+**How it should behave:** same answer → same score every time. Empty/skipped → 0. Feedback explains why marks were given. The method label is always `rule-based-v1`. Submitting twice for the same question updates (never duplicates).
+
+```
+PHASE 5 – ANSWERS & EVALUATION (Endpoints 30–34)
+
+Models: Answer (interview, user, questionId, questionIndex, answerText, status, source, timeTakenSeconds, voiceMetrics, attempt, attempts history [{answerText, score, evaluation, at}], evaluation (embedded per contract), timestamps; unique index {interview, questionId}), Evaluation data embedded in Answer. Report model arrives in Phase 7 but the interview total is computed here.
+
+Scoring service services/scoringService.js (pure functions, fully unit-tested, no DB access):
+- tokenizing/normalising text, light stemming, stop-word removal (English; for te/hi fall back to exact token matching and say so in explanation).
+- keywordCoverage, relevance, completeness (difficulty-based word ranges), clarity/structure (sentence stats, connectors, STAR detection for HR/communication categories), communication (filler words list: um, uh, like, actually, basically, you know, so; repeated words; wpm when voiceMetrics present).
+- Weights exactly as contract section 4. Return the Answer.evaluation shape: score, contentScore, communicationScore, method:"rule-based-v1", breakdown, matchedKeywords, missingKeywords, strengths[], weaknesses[], suggestions[], explanation (human-readable lines such as "Covered 3 of 5 key terms (+21 marks). Missing: polymorphism, encapsulation"), sampleAnswer (question.expectedAnswer).
+- Tone adjustment by interviewStyle only changes wording of feedback, NEVER the numeric score.
+
+Tasks:
+1. Endpoint 30: single and bulk submit. Check the interview is in_progress/paused and belongs to the user; questionId must exist in the snapshot; answerText ≤ 5000; skipped answers allowed. Upsert by {interview, questionId}. Evaluate and return the evaluation inside the answer.
+2. Endpoints 31–32 per contract.
+3. Endpoint 33: re-evaluate every answer, compute interview totalScore = average of answer scores (skipped = 0), contentScore and communicationScore averages; save on the interview; return { interview, report } – for now report may be an inline computed object until Phase 7 persists it. Idempotent.
+4. Endpoint 34 retry: push the previous result into attempts[], attempt+1, re-evaluate, return { answer, previous }. Allowed even after the interview is completed (it is practice) but then recompute interview totals.
+5. Complete the placeholder from Phase 4: Endpoint 29 now marks unanswered questions as skipped answers and runs the evaluation service.
+6. If body.clientEvaluation exists on complete, store it as `clientEvaluation` for reference only; the server score remains the official score.
+7. Add Answer cleanup to the delete-cascade registry.
+8. Tests: scoring unit tests (determinism, empty answer = 0, keyword boost, too-short penalty, filler detection, wpm range, STAR), endpoint tests (submit, upsert no duplicate, wrong interview state 400, wrong questionId 400, bulk, retry attempt increments, user isolation).
+
+Acceptance criteria:
+- Posting the same answer twice produces identical scores.
+- A strong answer scores noticeably higher than a vague one (include both examples in tests).
+- No response claims AI evaluation.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 6 – Notes and Resume (Endpoints 35–42, plus agreed PUT /api/notes/:id)
+
+**How it works:** notes are plain user text used for preparation and for note-based question generation. Resumes are uploaded files; the server validates, stores, extracts text and finds education/skills/projects/experience using the Skill collection and simple section parsing.
+
+**How it should behave:** unsafe or oversized files are rejected before saving; extraction failure never loses the upload (status `partial`/`failed`); deleting a resume removes the file from disk.
+
+```
+PHASE 6 – NOTES & RESUME (Endpoints 35–42 and the agreed extra PUT /api/notes/:id)
+
+Tasks – Notes:
+1. Note model (user, title, content, topic, tags, timestamps; text index on title/content). Endpoints 35–38 and the agreed PUT /api/notes/:id (document it in the contract as 35b). Pagination, search, topic filter, owner isolation.
+2. Notes-based question source: implement services/notesProcessor.js that extracts topics (headings), definitions (patterns like "X is …", "X means …"), and keywords (frequent meaningful terms). Plug it into the Phase 3 generator `noteId` branch so generated questions have source "notes".
+
+Tasks – Resume:
+3. Resume model (user, originalName, storedName, mimeType, sizeBytes, filePath, extractedText (select:false), extracted {education[], skills[], projects[], experience[]}, extractionStatus, timestamps).
+4. middleware/upload.js (multer disk storage in uploads/resumes/, random stored filename – never use the user's filename for the path; sanitise original name), limit MAX_FILE_SIZE_MB (default 5). Check extension, mimetype AND file signature (magic bytes: %PDF, PK for docx, D0CF11E0 for doc). 413 and 415 errors per contract. Remove the file if validation fails after upload.
+5. services/resumeParser.js: PDF → pdf-parse, DOCX → mammoth, DOC → extractionStatus "unsupported" (file still stored). Parse sections by headings (Education, Skills, Projects, Experience, etc.), match skills against the Skill collection plus a built-in tech keyword list. Always catch errors → extractionStatus "failed" with the upload kept.
+6. Endpoints 39–42. Never expose filePath. DELETE removes DB record and file (ignore missing file).
+7. Plug resume skills/projects into the generator `resumeId` branch (source "resume").
+8. Add notes and resumes to the delete-cascade registry (including files).
+9. Tests: notes CRUD + isolation + search; resume upload valid PDF/DOCX fixtures, wrong type 415, too large 413, fake .pdf with wrong signature rejected, extraction returns skills, delete removes file, generate with noteId/resumeId returns sources.
+
+Acceptance criteria:
+- Uploading a renamed .exe as .pdf is rejected.
+- Resume upload + generate questions from it works in Postman.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 7 – Reports, progress analytics and Dashboard (Endpoints 11–14, 43–46)
+
+**How it works:** the Report is created/updated whenever an interview is evaluated. Dashboard and progress endpoints are aggregations over completed interviews/answers. The download endpoint streams a generated PDF.
+
+**How it should behave:** brand-new users get zeros and starter recommendations, never errors. Weak topics are computed from average skill scores. PDF contains the full report.
+
+```
+PHASE 7 – REPORTS & DASHBOARD (Endpoints 11–14, 43–46)
+
+Tasks:
+1. Report model per contract (interview unique, user, title, scores, questionResults, strengths, weaknesses, suggestions, communicationAnalysis, method, timestamps). Update Endpoints 29 and 33 so they create/update the persisted Report (upsert by interview) and set interview.reportId. Strengths/weaknesses = top/bottom skills and recurring missing keywords. Suggestions = deduplicated answer suggestions + generic tips ranked by frequency.
+2. Endpoints 43, 44: list (summary) and detail with owner isolation. Route order: /progress before /:id.
+3. Endpoint 45: services/pdfReport.js using pdfkit: title, date, scores, per-question section (question, answer, score, feedback, sample answer), strengths/weaknesses, communication analysis, footer "Scored with rule-based-v1 (no AI used)". Stream with correct headers. Handle long text/page breaks.
+4. Endpoint 46: progress analytics with MongoDB aggregation grouped by week (last 8 weeks) or month (last 6 months); empty periods return zeros so the chart has continuous points; compute improvement (last period vs previous).
+5. Dashboard endpoints 11–14 per contract using aggregation (no N+1 queries). Recommendations: weakest 3 skills → suggested practice; fallback starter recommendations for users with no data.
+6. Add reports to the delete-cascade registry.
+7. Add DB indexes needed for these aggregations and mention them.
+8. Tests: stats zero state, stats after two interviews match manual calculation, activity order/limit, skills strong/weak, recommendations fallback, progress zero-filled, report list/detail isolation, PDF response has application/pdf content type and non-empty body.
+
+Acceptance criteria:
+- Completing an interview automatically makes a report visible in GET /api/reports.
+- Downloaded PDF opens and shows correct data.
+- Numbers on dashboard match the reports (verify with a manual calculation in tests).
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 8 – Security hardening, documentation, final QA
+
+**How it works:** this phase adds no new features. It verifies, secures and documents everything so the frontend developer can integrate with confidence.
+
+```
+PHASE 8 – HARDENING, DOCS & FINAL QA
+
+Tasks:
+1. Security review of the whole backend: confirm helmet, CORS origin list, rate limits (global + auth), body size limits, NoSQL injection protection (strip $ and . keys from req.body/query/params with express-mongo-sanitize or an equivalent in-house middleware), no sensitive fields in responses, uploads served only through protected endpoints (no public static folder), consistent 401/403/404 behaviour. List anything you changed.
+2. Confirm every one of the 55 endpoints (+ 35b) exists exactly as in the contract. Generate a checklist table: endpoint → implemented → tested → test file.
+3. Create docs/API_CONTRACT.md (final version, synced with the real implementation, including any contract changes made along the way), docs/DATABASE_SCHEMA.md (every model, fields, indexes, relationships), docs/PROJECT_ARCHITECTURE.md (backend part), and a Postman collection JSON (docs/TalkReady.postman_collection.json) with an environment variable for baseUrl and token, and test scripts that store the token after login.
+4. README (backend section): prerequisites, install, env setup, seed, run, test, folder structure, deployment note for running locally with local MongoDB (offline use) and MongoDB Atlas (online).
+5. Run: full test suite with coverage, npm audit (report high/critical issues), start the server on a clean database, run the seeder, and execute a manual end-to-end script: register → login → profile → generate questions → create interview → start → answers → complete → report → download PDF → progress → delete data.
+6. Report honestly: test count, coverage, real results, open issues.
+
+Acceptance criteria:
+- All tests pass; the end-to-end script succeeds on a clean DB.
+- Postman collection runs in order without manual edits.
+- Documentation matches the code (no endpoint documented but missing, none implemented but undocumented).
+```
+
+---
+
+# PART C – BACKEND CHECKLIST (tick after each phase)
+
+| Phase | Endpoints | Done |
+|---|---|---|
+| 0 Foundation | 54, 55 | ☐ |
+| 1 Auth | 1–5 | ☐ |
+| 2 Profile & Settings | 6–10, 47–49 | ☐ |
+| 3 Questions & Admin | 15–21, 50–53 | ☐ |
+| 4 Interviews | 22–29 | ☐ |
+| 5 Answers & Scoring | 30–34 | ☐ |
+| 6 Notes & Resume | 35–42 (+35b) | ☐ |
+| 7 Reports & Dashboard | 11–14, 43–46 | ☐ |
+| 8 Hardening & Docs | all | ☐ |
+
+# PART D – REUSABLE "FIX" PROMPTS
+
+**When a phase has errors:**
+```
+The previous phase has this error: <paste exact error/log>. Find the root cause, fix only what is necessary, do not change the API contract, re-run the tests for that phase and show the real output.
+```
+
+**When you need to change the API (rare):**
+```
+I need to change endpoint <X>: <what and why>. First show me exactly what changes in the contract, backend files and frontend service calls. Do not implement until I confirm. After confirmation update 00_SHARED_API_CONTRACT.md / docs/API_CONTRACT.md as well.
+```
+
+**Before handing over to the frontend developer:**
+```
+Verify the running backend against docs/API_CONTRACT.md by calling every endpoint and list any difference in path, field name, status code or response shape. Fix differences in the backend (not the contract) unless the contract is clearly wrong.
+```

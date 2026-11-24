@@ -1,0 +1,471 @@
+# TalkReady – FRONTEND Phased Prompts (React + Vite + Tailwind)
+
+For the frontend developer. Use these prompts one phase at a time with your AI coding assistant. Always attach `00_SHARED_API_CONTRACT.md` together with each prompt.
+
+---
+
+## HOW TO USE THIS FILE
+
+1. Paste **PART A (Master Prompt)** once at the start of the session.
+2. Then paste **one phase prompt at a time**, in order (Phase 0 → Phase 11).
+3. After each phase the assistant must stop, report, and wait. Run the app and click through the phase yourself before moving on.
+4. The frontend works with a **mock API first**, then switches to the real backend with one environment variable. So you do not have to wait for the backend developer.
+
+Note: there is no existing code (no GitHub repository yet). This is a fresh project. The frontend lives in the `frontend/` folder of the `TalkReady` repository.
+
+---
+
+# PART A – MASTER PROMPT (paste once)
+
+```
+You are a Senior React Frontend Engineer and UI/UX Designer.
+
+PROJECT: TalkReady – an offline-first mock interview web application for students and job seekers (HR, Technical, General, Communication and Coding interviews; text and voice answers; instant feedback; reports; notes; resume; progress tracking). You are building ONLY the FRONTEND. A different developer builds the Express/MongoDB backend. You must follow the attached API contract (00_SHARED_API_CONTRACT.md) EXACTLY: same paths, field names, enums and response shapes.
+
+TECH STACK (do not add other major libraries without telling me why):
+- React 18 + Vite + JavaScript (no TypeScript)
+- Tailwind CSS, React Router v6, Axios, lucide-react icons
+- State: React Context + custom hooks (AuthContext, SettingsContext, InterviewContext, OfflineContext). No Redux.
+- Offline: IndexedDB through the "idb" library, Service Worker via vite-plugin-pwa (Workbox)
+- Charts: recharts
+- Forms: plain controlled components with a small validation util (or react-hook-form if you justify it)
+- Tests: vitest + @testing-library/react (+ msw for API mocking in tests)
+- i18n: a small in-house translation layer (JSON files + useTranslation hook) – no heavy library needed
+
+FOLDER STRUCTURE
+frontend/src/
+  components/  (ui/ = Button, Input, Select, Card, Modal, Toast, Spinner, Skeleton, EmptyState, ErrorState, Badge, ProgressBar, Tabs, ConfirmDialog; layout/ = Navbar, Sidebar, Footer, OfflineBanner; feature folders)
+  pages/  layouts/  routes/ (AppRoutes, ProtectedRoute, AdminRoute, GuestOrAuthRoute)
+  services/ api/ (axios client, authApi, profileApi, questionsApi, interviewsApi, answersApi, notesApi, resumesApi, reportsApi, dashboardApi, settingsApi, adminApi, index.js)
+  services/ mock/ (mock data + mock implementations with the SAME function signatures)
+  services/ offline/ (db.js, syncQueue.js, localScorer.js, localQuestions.js, localInterviewStore.js)
+  hooks/  context/  utils/  config/ (constants.js with enums, routes.js)  i18n/ (en.json, te.json, hi.json)  assets/  styles/
+
+NON-NEGOTIABLE RULES
+1. Follow the contract exactly. If anything is unclear, STOP and ask me. Never invent endpoints or field names.
+2. All HTTP calls live in services/api/*. Components NEVER call axios directly. Components use hooks that call services.
+3. MOCK SWITCH: services/api/index.js exports the real or mock implementation depending on VITE_USE_MOCK ("true"/"false"). Both implementations must have identical function names, arguments and return shapes (return the `data` already unwrapped, plus `pagination` where applicable). Mock data lives only in services/mock/. Never hardcode mock data inside components.
+4. Enums, categories, roles, skills and question text are NOT hardcoded in components. Enums come from config/constants.js. Categories/roles/skills come from the API (/questions/categories, /roles, /skills) with an offline cache.
+5. Every page and data-driven component has FOUR states: loading (skeleton/spinner), empty (message + action), error (message + Retry button), success (toast or inline feedback when something is saved/deleted).
+6. Every button, link, form, modal, dropdown and filter must work. No dummy buttons, no placeholder pages, no "coming soon". If something is not built yet in the current phase, do not render it.
+7. Forms: validate on submit and on blur, show field-level messages, disable submit while loading, prevent double submit.
+8. Responsive (mobile 360px, tablet, laptop, desktop). Mobile uses a drawer/bottom navigation instead of a sidebar. No horizontal scrolling. Touch targets ≥ 44px.
+9. Accessibility: semantic HTML, labels for inputs, visible focus, aria-live for toasts/timer warnings, color contrast AA, keyboard navigable modals.
+10. Design system: clean, modern, professional, student-friendly. Primary colour indigo/blue, neutral grays, green = success, amber = warning, red = error. Define colours/spacing in tailwind.config.js and reuse. Light and dark theme through a `dark` class. No excessive gradients/animations/decorations. Lucide icons only.
+11. Never show raw errors/stack traces. Map API errors to friendly messages (use the `message` and `errors[]` from the contract). Handle 401 globally (clear token, redirect to /login with a "session expired" toast), network errors (friendly offline message), 403, 404, 500.
+12. Token: store the JWT in localStorage under one key; axios interceptor adds the Authorization header. Never log tokens.
+13. Never claim something works unless you ran it. Do not fabricate test results. Always run `npm run build` and the tests and fix every error/warning you introduced before reporting.
+
+WORKING STYLE FOR EVERY PHASE
+- Start by listing the files you will create/change, the pages/components, and the API functions used.
+- Implement the phase completely (UI + service + state + states + responsive + i18n keys).
+- Run: npm run lint (if configured), npm run build, npm run test. Fix everything.
+- Finish with a report: files created/modified, routes added, API functions used (mock or real), how I should test manually (exact click path), real test/build output, known issues.
+- STOP and wait for me to say "continue".
+
+Reply "Ready" and wait for Phase 0.
+```
+
+---
+
+# PART B – PHASE PROMPTS
+
+## PHASE 0 – Project setup, design system, layouts, API layer
+
+**What this phase gives you:** a running React app with the design system, routing skeleton, layouts, reusable UI components, axios client, and the mock/real API switch. Nothing feature-specific yet.
+
+**How it should work:** `npm run dev` opens the app; a Home/landing page and a 404 page show; dark/light toggle works; the layout is responsive; a test component page is NOT left behind.
+
+```
+PHASE 0 – FOUNDATION
+
+Tasks:
+1. Create the Vite React app in frontend/, install Tailwind, React Router, Axios, lucide-react, idb, vite-plugin-pwa, recharts, vitest, testing-library, msw. Keep dependencies minimal.
+2. tailwind.config.js: colour tokens (primary, success, warning, danger, surface, muted), font (Inter via system fallback, no external requests so it works offline), dark mode "class", container sizes.
+3. config/constants.js: ALL enums from contract section 1.4 + route paths in config/routes.js.
+4. UI kit in components/ui: Button (variants, sizes, loading), Input, Textarea, Select, Checkbox, Card, Modal, ConfirmDialog, Toast system (provider + hook), Spinner, Skeleton, EmptyState, ErrorState (with Retry), Badge, ProgressBar, Tabs, Pagination, SearchInput. Each accessible and responsive.
+5. Layouts: PublicLayout (navbar + footer), AppLayout (sidebar on desktop, top bar + drawer on mobile, user menu, theme toggle, online/offline indicator), AuthLayout (centered card).
+6. Routing skeleton in routes/: AppRoutes with lazy-loaded pages (React.lazy + Suspense with a skeleton fallback), ProtectedRoute, AdminRoute, NotFound page, ErrorBoundary that shows a friendly crash screen with a "Reload" button.
+7. services/api/client.js: axios instance (baseURL from VITE_API_URL, timeout 15s), request interceptor (Bearer token), response interceptor (unwrap contract format, normalise errors into { status, message, errors[] }, 401 handling hook, network error detection → code "NETWORK_ERROR").
+8. services/api/index.js: the real/mock switch driven by VITE_USE_MOCK. Create empty-but-typed-by-JSDoc service modules ONLY as each phase needs them (do not create files that are never used).
+9. context/ThemeContext (light/dark/system, persisted), hooks/useOnlineStatus, components/layout/OfflineBanner (shown only when offline).
+10. i18n skeleton: i18n/en.json, te.json, hi.json, a LanguageContext + useTranslation(t) hook with fallback to English for missing keys. Navbar/layout text already uses t().
+11. .env.example (VITE_API_URL, VITE_USE_MOCK), README frontend section, .gitignore.
+12. Tests: Button, Input, Toast, ProtectedRoute redirect, theme toggle.
+
+Acceptance criteria:
+- App runs, builds with no warnings, dark/light works, 404 page works, layout collapses properly on a 360px screen.
+- Turning the network off shows the offline banner without breaking the page.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 1 – Authentication, guest mode, protected routes (API 1–5)
+
+**How it works:** Register/Login call the API (or mock). The token + user are stored and restored on page refresh via `GET /auth/me`. Guest mode skips the account: a guest can start interviews and all data is stored only in this browser (IndexedDB). Protected pages redirect to login; guest-allowed pages (Dashboard, Start Interview, Questions, Notes) allow guests.
+
+**How it should behave:** wrong password shows the server message; expired session logs the user out with a message; guests see a persistent, dismissible "Guest mode – data stays on this device" notice and a "Create account to sync" button.
+
+```
+PHASE 1 – AUTH & GUEST MODE (Endpoints 1–5)
+
+Tasks:
+1. services/api/authApi.js (real + mock): register, login, logout, getMe, changePassword.
+2. AuthContext: user, token, isAuthenticated, isGuest, loading, login(), register(), logout(), continueAsGuest(), refreshUser(). On app start: if a token exists call getMe (show full-page skeleton meanwhile); if 401 clear it.
+3. Pages: Landing (hero, features, CTA to Register/Login/Try as Guest – real content from the product description, not lorem ipsum), Login, Register, ChangePassword (inside Settings later; for now a modal reachable from the user menu).
+4. Validation exactly as the contract (name 2–60, email format, password ≥ 8 with letter+number, confirm password match). Show password strength hint and a show/hide toggle.
+5. Guest mode: createGuestProfile() stores { guestId, createdAt } in IndexedDB/localStorage; AuthContext.isGuest = true; no API calls that need a token are made for guests (services detect guest mode and use the offline store in later phases). Add GuestBanner.
+6. Route guards: ProtectedRoute (account required), GuestOrAuthRoute (account OR guest), AdminRoute (role admin → else 403 page), and redirect back to the originally requested page after login.
+7. Global 401 handling: clear auth, toast "Session expired", redirect to login.
+8. User menu in AppLayout: profile link (placeholder route not allowed – link only to pages that exist; hide until Phase 9), change password, logout (calls API logout, clears local auth state even if the call fails).
+9. Mock auth: stores users in localStorage with fake token so the whole flow works without a backend. Mock must follow the same validation errors and the 401 message from the contract.
+10. Tests: login success/failure, register validation, guard redirects, guest entry, token restore on refresh, logout.
+
+Acceptance criteria:
+- Register → auto login → refresh page → still logged in. Logout → protected page redirects to login.
+- Guest can open the app without any account.
+- Works with VITE_USE_MOCK=true and (once the backend is ready) with false without changing component code.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 2 – Dashboard (API 11–14)
+
+**How it works:** the dashboard shows summary cards (total interviews, average score, practice hours, best score), recent activity, skill performance (technical vs communication, strong/weak topics), recommendations, and quick actions. For guests/offline it computes the same numbers from local interview history (the local store is filled in Phase 5; until then it shows the empty state).
+
+**How it should behave:** a new user sees friendly zero values and a clear "Start your first interview" call to action, not an error. Every quick-action button navigates to a real page; actions whose page is not built yet are hidden.
+
+```
+PHASE 2 – DASHBOARD (Endpoints 11–14)
+
+Tasks:
+1. services/api/dashboardApi.js (real + mock): getStats, getActivity, getSkills, getRecommendations.
+2. hooks/useDashboard: loads the 4 resources in parallel with independent loading/error states (one failing card must not break the page; each card has its own retry).
+3. Components: WelcomeHeader (name, greeting by time of day, motivational line), StatCard (icon, value, label, trend), RecentActivityList, SkillsOverview (progress bars: technical, communication; chips for strong/weak topics), RecommendationCard (title, reason, "Practice now" button that opens Start Interview with the suggested category/role/difficulty/skill pre-selected through router state), QuickActions (Start Interview, Practice Questions, Notes, Reports – only the pages that exist).
+4. Weekly/monthly chart placeholder is NOT allowed – add the chart only when Phase 6 provides report/progress data; until then omit it.
+5. Responsive grid: 1 column mobile, 2 tablet, 4 for stat cards on desktop.
+6. Guest/offline: dashboard source selection happens inside the service layer (api vs local store) so the component code does not change.
+7. i18n keys for all text.
+8. Tests: loading skeleton, empty state, error + retry per card, recommendation navigation passes preselected values.
+
+Acceptance criteria:
+- Mock data renders all cards; empty mock renders friendly empty states; killing one request shows only that card's error.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 3 – Question bank and Start Interview setup (API 15–21)
+
+**How it works:** *Question Bank* lets students browse/search/filter questions (category, role, skill, difficulty, language), view details (expected answer, keywords) and practise randomly. *Start Interview* is a step-by-step setup wizard that collects every option, then creates the interview (Phase 4).
+
+**How it should behave:** filter options come from the API (categories/roles/skills), not code. The setup form remembers the student's defaults from their preferences. Invalid combinations (e.g. no questions available) show a clear message before the interview starts. Question bank works offline from the cached copy.
+
+```
+PHASE 3 – QUESTION BANK & INTERVIEW SETUP (Endpoints 15–21)
+
+Tasks:
+1. services/api/questionsApi.js (real + mock): list, getById, getCategories, getRoles, getSkills, generate, random.
+2. Offline cache (services/offline/localQuestions.js): after any successful fetch of categories/roles/skills and question pages, store them in IndexedDB. When offline or the request fails with NETWORK_ERROR, serve from IndexedDB and show a small "Offline – showing saved questions" badge. Also bundle a small seed file (src/assets/seed/questions.en.json, ≥ 60 questions across all categories, same shape as the contract Question) used to pre-populate IndexedDB on first run so the app is usable offline from the very first launch.
+3. Page: Question Bank (/questions): search (debounced), filter bar (category, role, skill, difficulty, language), pagination, question cards (text, badges, "View"), Question Details modal (expected answer, keywords, time limit, tags), "Random question" button that shows a random question to practise by thinking/typing (no scoring here), "Practice these filters" shortcut that jumps to Start Interview with the filters pre-selected.
+4. Page: Start Interview (/interview/setup) as a 3-step wizard with a progress indicator and Back/Next:
+   Step 1 – Category (5 cards with icon + description), Job role (select), Skills/topics (multi-select, filtered by role).
+   Step 2 – Difficulty (3 options), Duration (5/10/15/30), Question count (5/10/15), Interview style (Friendly Coach / Standard / Strict / Rapid-fire with a one-line description each), Language (en/te/hi; disable options that have no questions, with tooltip explaining why).
+   Step 3 – Mode (Text / Voice – voice only enabled when the browser supports speech APIs, otherwise disabled with an explanation / Practice / Timed) and Source of questions (Question bank, Use my notes, Use my resume – the last two options appear only when the Notes/Resume features exist, wired in Phase 7; until then show only the bank), plus a review summary of every choice.
+5. Pre-fill the wizard from: router state (from dashboard/question bank) → user preferences (Phase 9) → sensible defaults. Persist a draft of the form in sessionStorage so a refresh does not lose it.
+6. Validation: each step must be valid before Next. At the end call interviewsApi.create (Phase 4) – for this phase implement the call and navigate to /interview/:id/check; if the interview page doesn't exist yet, stop at a success screen that shows the created interview summary with no dead buttons.
+7. Pre-interview readiness page (/interview/:id/check): checks – online/offline status, questions loaded, for voice mode: microphone permission test with a level meter and speaker test button, browser speech-recognition support; text mode skips mic checks. "Begin interview" button calls start. Clear messages for denied permission with how-to-fix steps.
+8. Tests: filter → request params mapping, offline fallback to IndexedDB, wizard step validation, language option disabled state, preselected values from router state.
+
+Acceptance criteria:
+- Search + filters work with mock and real data; turning the network off still lists the cached/seeded questions.
+- Wizard cannot proceed with invalid steps; summary matches choices; draft survives refresh.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 4 – Interview experience, text mode (API 22–29, 30)
+
+**How it works:** the interview screen shows one question at a time with question number, progress bar, a timer, an answer box, Submit/Next, Skip, Previous (where allowed), Pause/Resume and Finish. Every answer is autosaved locally and sent to the server. When the interview is finished, the student sees a completion screen and then the results (Phase 6).
+
+**How it should behave:** a refresh, accidental tab close or network drop never loses answers. The timer is accurate (based on timestamps, not just setInterval ticks). Finishing early asks for confirmation. Practice mode shows hints and has no timer; Timed mode auto-advances when the per-question time ends.
+
+```
+PHASE 4 – INTERVIEW EXPERIENCE – TEXT MODE (Endpoints 22–30)
+
+Tasks:
+1. services/api/interviewsApi.js (create, list, get, update, remove, start, pause, complete) and answersApi.js (submit, list, get, evaluate, retry) – real + mock. Mock behaviours must follow the contract state machine (draft → in_progress ⇄ paused → completed) and return 400-style errors for invalid transitions.
+2. context/InterviewContext + hook useInterview: holds interview, questions, currentIndex, answers map, timers, status; actions: start, submitAnswer, skip, next, previous, pause, resume, finish; derived: progress %, answered count.
+3. Page /interview/:id (InterviewPage): header (category + role badges, question n of N, progress bar, timer), QuestionCard (text, skill tag, difficulty), AnswerEditor (textarea with live word count, character limit 5000, clear button), controls (Submit & Next, Skip – disabled in Strict style, Previous – only in Practice mode, Pause, Finish). A "Hint" button in Practice/Friendly modes shows the first keywords or a hint derived from the question's evaluationCriteria.
+4. Timers: overall timer from durationMinutes (counts down, turns amber at 20% left, red at 10%, aria-live announcements at 1 min and 10 s), per-question timer when the mode is Timed or style is Rapid-fire. Use Date.now() deltas so background-tab throttling does not cause drift. On overall time-up auto-finish (with a 5-second "Time is up – submitting" notice); on per-question time-up auto-submit the current text and move on.
+5. Autosave: on every answer change (debounced 800 ms) write to IndexedDB (services/offline/localInterviewStore.js): interview snapshot, answers, currentIndex, elapsedSeconds. On Submit send the answer to the API (answersApi.submit); if the request fails because of NETWORK_ERROR keep it in the sync queue (Phase 5 completes the queue; here it is enough that nothing is lost and a "Saved on this device" indicator is shown).
+6. Recovery: if the user reopens /interview/:id (or lands on the app with an unfinished local interview) show a "Resume your interview" card with the saved progress.
+7. Leave protection: beforeunload warning and React Router blocker when there are unsaved/in-progress changes.
+8. Pause: call pause with elapsedSeconds; paused overlay hides the question (prevents cheating the timer) with a Resume button.
+9. Finish: confirmation modal listing answered/skipped counts → call complete → completion screen (confetti-free, simple): summary, "View detailed results" (goes to /reports/:id once Phase 6 exists; until then show the total score and the answer list) and "Start another interview".
+10. Interview styles: Friendly = encouraging microcopy and hints; Standard = neutral; Strict = no skip, no hints, no previous; Rapid-fire = short per-question limit. Only microcopy/rules change here.
+11. Keyboard: Ctrl+Enter submits; focus returns to the textarea on question change.
+12. Tests: timer accuracy with fake timers, autosave to IndexedDB, resume after reload, skip disabled in strict, state machine errors surfaced as friendly messages, finish confirmation.
+
+Acceptance criteria:
+- Complete a 5-question interview end-to-end in mock mode and (when ready) with the real backend.
+- Refresh in the middle → resume with answers and timer intact.
+- No answer is lost when the network is cut during the interview.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 5 – Offline engine, local scoring and sync (core requirement)
+
+**How it works:** the app is a PWA: the shell and assets are precached by the service worker, so it opens with no internet. The interview works fully offline using locally stored questions. If the server is not reachable, answers are scored by a **local rule-based scorer** that follows the same rules as the backend (contract section 4) and is labelled `local-rule-based-v1`. Everything done offline is put into a **sync queue** and uploaded when the server is reachable again.
+
+**How it should behave:** never a blank page offline; a clear "Offline" indicator; offline results are clearly marked "Scored on this device (rule-based, no AI)"; when back online the queue syncs automatically (idempotent through `clientId`), and the user sees a "Synced" confirmation. Guests keep everything locally only.
+
+```
+PHASE 5 – OFFLINE-FIRST ENGINE (affects Endpoints 22–34, 11–14, 43–46)
+
+Tasks:
+1. PWA: configure vite-plugin-pwa (autoUpdate with an in-app "New version available – Refresh" prompt), manifest (name, short name, theme colour, icons – generate simple SVG/PNG icons), precache app shell + the seed questions, runtime caching: GET /api/questions* and /api/questions/categories|roles|skills (StaleWhileRevalidate), never cache auth or POST/PUT/DELETE. Offline navigation fallback to index.html.
+2. IndexedDB schema (services/offline/db.js using idb), with versioning/migrations: questions, meta (categories/roles/skills), interviews, answers, reports, notes, syncQueue, settings, guest. Wrap in small typed helper functions.
+3. Local interview creation: when the API is unreachable (or the user is a guest) interviewsApi.create falls back to services/offline/localInterviewStore.createLocalInterview using localQuestions (filters + random + no duplicates; fill shortage with template questions like the backend). The interview gets a clientId (uuid) and a local id prefixed "local_".
+4. services/offline/localScorer.js: pure function evaluateAnswer(question, answerText, { voiceMetrics, difficulty, category, style }) implementing EXACTLY the weights/rules in contract section 4 and returning the contract Answer.evaluation shape with method "local-rule-based-v1", explanation, strengths, weaknesses, suggestions, sampleAnswer. Deterministic; same input = same output. Also aggregateInterview(answers) → totals and a local Report object (contract Report shape) saved to IndexedDB.
+5. Service routing strategy inside services/api/index.js (or a wrapper "offlineAware" layer): try real API → on NETWORK_ERROR or server 5xx/503 fall back to the local implementation → record the operation in syncQueue. Guests always use local. Components remain unchanged.
+6. Sync queue (services/offline/syncQueue.js): entries { id, type, payload, createdAt, attempts, status }. Processing order: create interview (with clientId) → start → submit answers (bulk) → complete (with clientEvaluation) → replace the local interview/report with the server version (keep a mapping localId → serverId and update routes/links). Retry with exponential backoff, max attempts, visible failed state with a manual "Retry" button, idempotent (safe if a request is repeated), conflict handling (409 → mark synced). Triggers: 'online' event, app start, every 60 s while online, manual "Sync now" button.
+7. OfflineContext/useOffline: isOnline, isServerReachable (ping GET /api/health every 30 s when online; the browser "online" flag alone is not enough), pendingCount, syncNow(), lastSyncAt. Header indicator shows: Online, Offline, "Server unreachable – working locally", "n items waiting to sync".
+8. Clear labelling: results screens show a badge with the evaluation method ("Scored on this device – rule-based" / "Scored by server – rule-based"). Never use the word "AI" for rule-based scoring.
+9. Offline pages: dashboard stats, history and reports computed from IndexedDB when offline (dashboardApi/reportsApi fall back to local aggregation using the same formulas).
+10. Storage safety: request persistent storage (navigator.storage.persist), show a warning when quota is low, handle IndexedDB errors with a friendly message and fall back to in-memory for the session.
+11. Tests: localScorer determinism and parity cases (use the same sample answers as the backend tests and document expected score ranges), IndexedDB helpers with fake-indexeddb, sync queue order/retry/idempotency with msw (including 500, timeout and 409), fallback routing, guest isolation.
+
+Acceptance criteria (verify manually in Chrome DevTools → Network → Offline, and by stopping the backend):
+- Hard reload while offline → app loads, no blank page.
+- Complete a full interview offline, see a local score and report, close the browser, reopen, history still there.
+- Start the backend / go online → the queue syncs once; the interview appears on the server exactly once; the local entry is replaced.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 6 – Results, reports and progress (API 33–34, 43–46)
+
+**How it works:** after an interview the student sees a detailed report: total / content / communication score, per-question results with the explanation of marks, strengths, weaknesses, suggestions, sample answers, communication analysis (filler words, pace, pauses when voice was used). The student can retry a question and compare attempts, download a PDF, and see progress charts over time.
+
+**How it should behave:** each score is explained (why marks were added or lost). The evaluation method is shown. Retry updates only that question and shows previous vs new score. PDF download works online (server) and offline (generated in the browser).
+
+```
+PHASE 6 – RESULTS, REPORTS & PROGRESS (Endpoints 33, 34, 43, 44, 45, 46)
+
+Tasks:
+1. services/api/reportsApi.js (list, get, download, progress) – real + mock + offline fallback (local aggregation).
+2. Page /reports (Report history): list/table of interviews (date, title, category, score badge with colour by range, method badge), filters (category, date range), sort, pagination, delete (confirm) and open. Empty state with CTA.
+3. Page /reports/:id (Report details):
+   - Score summary: radial/progress for total, content, communication.
+   - Tabs or sections: Overview (strengths, weaknesses, suggestions), Question-wise (accordion: question, your answer, score breakdown bars: relevance/keywords/completeness/clarity/communication, matched ✓ and missing ✗ keywords, explanation text, sample answer, suggestions), Communication (words-per-minute gauge with ideal band, filler-word chart, pauses – shown only when voice metrics exist, otherwise a short note).
+   - Retry question: opens the answer editor (modal) pre-filled with the previous answer; submits via answersApi.retry; shows previous vs new score with delta arrow; updates totals.
+   - "Evaluation method" badge and tooltip explaining rule-based scoring.
+   - Download PDF button: online → call download endpoint and save the blob with the filename from Content-Disposition; offline/local report → generate the PDF in the browser with a lightweight approach (print stylesheet + window.print() "Save as PDF", or jsPDF if you justify it). Handle errors with a toast.
+   - Export progress as CSV (client-side from loaded data): date, title, category, total, content, communication.
+4. Progress page or dashboard section (/reports/progress or inside Dashboard): weekly/monthly toggle, recharts line chart (average score), bar chart (content vs communication), improvement indicator (+/- vs previous period). Zero-filled periods so the line is continuous. Add this chart to the Dashboard now (the Phase 2 omission) and to the interview completion screen "View detailed results" link.
+5. Compare: select two reports of the same category and show a side-by-side comparison of scores.
+6. Accessibility for charts: add text summaries and aria-labels; do not rely on colour alone.
+7. Tests: score colour thresholds, retry flow (previous vs new), missing voice metrics rendering, CSV content, empty/loading/error states, PDF button error path.
+
+Acceptance criteria:
+- Finish a mock interview → open its report → all sections show real data, retry works, PDF/print works, CSV downloads.
+- Works for a local/offline report as well as for a server report.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 7 – Notes and Resume (API 35–42 + 35b)
+
+**How it works:** *Notes* let students write and organise study notes (offline too). *Resume* lets them upload a PDF/DOC/DOCX, see the extracted skills/education/projects/experience, and generate interview questions from them. Notes and resume can then be chosen as the question source in Start Interview.
+
+**How it should behave:** notes save offline and sync later; resume upload validates file type and size on the client first (but the server is the final authority); extraction problems are explained; deleting always asks for confirmation.
+
+```
+PHASE 7 – NOTES & RESUME (Endpoints 35–42, plus agreed PUT /api/notes/:id)
+
+Tasks – Notes:
+1. services/api/notesApi.js (create, list, get, update, remove) – real + mock + offline fallback (IndexedDB notes store, with the sync queue for create/update/delete).
+2. Page /notes: list with search, topic filter, pagination; NoteEditor (title, topic, tags, content with live character counter, autosave draft locally), view mode, edit, delete (confirm), empty state, "Generate questions from this note" button (calls questionsApi.generate with noteId and shows the generated questions in a modal with a "Practice with these" button → Start Interview with source = notes).
+3. Offline: notes created offline show a "Waiting to sync" badge; the question generation from notes works offline using a local notesProcessor (definitions "X is …", headings, frequent keywords → template questions) mirroring the backend.
+
+Tasks – Resume:
+4. services/api/resumesApi.js (upload with progress, list, get, remove) – real + mock.
+5. Page /resume: drag-and-drop + click upload; client checks: extension (.pdf/.doc/.docx), size ≤ 5 MB, with clear messages; upload progress bar; list of resumes; detail view with extracted sections (Education, Skills as chips, Projects, Experience) and extraction status messages (partial/unsupported/failed explained in plain words); delete with confirm; "Generate interview questions" → generate with resumeId → modal → "Practice with these".
+6. Resume requires an account and internet (server-side parsing). Guests/offline see a clear explanatory message (not a broken button), and the rest of the app is unaffected.
+7. Enable "Use my notes" and "Use my resume" in the Start Interview wizard (Step 3 source selection): pick a specific note or resume from a dropdown; pass noteId/resumeId to interviewsApi.create.
+8. Add Notes and Resume to the sidebar and Dashboard quick actions.
+9. Tests: notes CRUD with offline queue, file validation messages, upload progress, extracted sections rendering for each status, wizard source selection passes ids.
+
+Acceptance criteria:
+- Create a note offline → later synced; generate questions from it; start an interview using it.
+- Upload a resume → extracted skills shown → interview started from it.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 8 – Voice interview (speech-to-text and text-to-speech)
+
+**How it works:** in Voice mode the interviewer reads each question aloud (text-to-speech) and listens to the student's spoken answer (speech-to-text). The transcript appears live and can be edited before submitting. The app calculates speaking pace, filler words and pauses.
+
+**How it should behave:** be honest about limits. Browser speech recognition (Web Speech API) often needs internet (it uses the browser vendor's servers) and is not supported in every browser. If it is not available or the user is offline, the app clearly says so and offers the Text interview as the fully offline fallback. Never fake a transcript.
+
+```
+PHASE 8 – VOICE MODE
+
+Tasks:
+1. hooks/useSpeechRecognition (Web Speech API SpeechRecognition/webkitSpeechRecognition): start/stop, continuous + interim results, language mapping (en → en-IN or en-US per setting, te → te-IN, hi → hi-IN), error mapping (not-allowed, no-speech, network, audio-capture, language-not-supported) to friendly messages, auto-restart on silence while the user is still answering (with a safe limit).
+2. hooks/useSpeechSynthesis: speak(question), cancel, pause/resume, voice selection per language (if no voice exists for te/hi tell the user and show the text), rate setting from preferences. Stop speaking when the user starts answering (echo prevention) and do not start listening until the question finished speaking.
+3. Capability detection util: supportsSpeechRecognition, supportsSpeechSynthesis, isOnline. In the setup wizard and readiness check show exactly what will work: "Voice answers need internet in this browser. You are offline – use Text mode." Voice mode option is disabled (with explanation) when not supported.
+4. Voice UI in InterviewPage: big mic button (start/stop with clear recording state, pulsing indicator with reduced-motion support), live transcript, editable transcript box, "Retry recording" (clears the transcript), "Repeat question" (re-speak), Pause/Resume, Skip, Hint (via command buttons – voice commands optional: "repeat", "skip", "pause", "hint", only if recognition is reliable; otherwise buttons only).
+5. Voice metrics (utils/voiceMetrics.js): words per minute from transcript word count ÷ speaking duration, filler-word counts (um, uh, like, actually, basically, you know, so), pause count and longest pause (from timestamps of result events/silence gaps), voice activity timing. Send as voiceMetrics with the answer (source "voice"); the scorers (local and server) use them.
+6. Microphone permission handled only when needed (on first Start/readiness test), with a "How to enable the microphone" help dialog. No audio recording is stored; show a short privacy note ("Your voice is not saved by TalkReady. Your browser's speech service may process it.").
+7. Fallbacks: any error during voice → show the message, keep the transcript so far, allow typing in the same box, never lose the answer.
+8. Tests: capability detection, error mapping, metrics calculation (fixed transcripts and timestamps), echo-prevention order (speak → then listen), typed fallback keeps text. Mock the Web Speech API in tests.
+
+Acceptance criteria:
+- In Chrome online: question is spoken, answer transcribed live, metrics stored and shown in the report.
+- Offline or unsupported browser: clear message and the text interview works.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 9 – Profile, Settings, multi-language, data management (API 6–10, 47–49)
+
+**How it works:** Profile holds personal and career info and skills; Settings holds theme, language, interview defaults, offline options, data management. Changing the language changes the **whole app**, not just the dropdown.
+
+**How it should behave:** changes save with feedback; preferences pre-fill the Start Interview wizard; destructive actions need confirmation (typing DELETE and password where the contract requires it).
+
+```
+PHASE 9 – PROFILE, SETTINGS & LANGUAGE (Endpoints 6–10, 47–49, 5)
+
+Tasks:
+1. services/api/profileApi.js (get, update, updateSkills, updatePreferences, deleteAccount) and settingsApi.js (get, update, deleteData) – real + mock + offline (guest/offline settings stored in IndexedDB/localStorage; synced for logged-in users).
+2. Page /profile: avatar initials, name, email (read-only), education, experience, job role (select from API roles), career goal, skills editor (chips with add/remove, max 30, suggestions from /questions/skills), save with validation and toast; unsaved-change warning.
+3. Page /settings with sections (tabs or accordion on mobile):
+   - General: language (en/te/hi), theme (light/dark/system).
+   - Interview preferences: default category, difficulty, duration, question count, style, mode (these feed the wizard defaults).
+   - Offline: auto-sync toggle, "Sync now", pending items count, last sync time, storage usage (navigator.storage.estimate()), "Download questions for offline use" (re-cache everything), clear cached data.
+   - Account: change password (existing modal), logout.
+   - Data & privacy: explanation of what is stored and where ("stored on this device in your browser; synced to the server only if you have an account"), export my data as JSON (profile, interviews, reports, notes from local/server), Delete all data (type DELETE; calls DELETE /settings/data and clears IndexedDB), Delete account (password + confirm; calls DELETE /profile; clears everything; goes to the landing page).
+4. i18n completion: every visible string in the app (navigation, buttons, labels, validation messages, toasts, empty/error states, dashboard, setup wizard, interview screen, reports, settings) uses t(). Provide complete en.json, plus te.json and hi.json translations for all keys (flag any key you are unsure about with a comment file listing "needs review by a native speaker"). Language switch applies instantly app-wide and persists; also sets <html lang>. Also pass the language to the interview setup default and to speech recognition.
+5. Question content language is separate from UI language – make this clear in the wizard (UI language vs interview language).
+6. Tests: preferences prefill the wizard, language switch changes text across pages, delete confirmations (wrong confirm text blocked), settings offline persistence, skills editor limits.
+
+Acceptance criteria:
+- Switch to Telugu → navigation, dashboard, wizard, interview controls, reports and settings are in Telugu (no leftover English except proper nouns and user content).
+- Delete all data removes local and server data; the account remains.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 10 – Admin module (API 50–53)
+
+**How it works:** admins (role `admin`) manage the question bank and see usage numbers. Students never see these pages.
+
+**How it should behave:** non-admins are blocked at the route level (403 page) and by the server; question forms validate all fields; deleting uses confirmation; new categories/roles/skills can be created through the question form (as the contract defines).
+
+```
+PHASE 10 – ADMIN MODULE (Endpoints 50–53)
+
+Tasks:
+1. services/api/adminApi.js (getDashboard, createQuestion, updateQuestion, deleteQuestion) – real + mock. Listing/searching questions reuses questionsApi.list.
+2. Routes under /admin protected by AdminRoute; sidebar "Admin" section only for admins.
+3. Admin dashboard: cards (users, interviews, questions), questions-by-category chart, recent users/interviews tables.
+4. Question management page: table with search, filters (category, role, skill, difficulty, language, active), pagination, bulk-select not required; actions Edit/Delete/Duplicate.
+5. Question form (modal or page): text, category, job role (select OR "add new"), skill (select OR "add new"), difficulty, language, expected answer, keywords (chips), evaluation criteria (list editor), time limit, tags, active toggle; full validation per contract; live preview of how the question appears in an interview.
+6. Delete confirmation explains soft-delete vs hard-delete result returned by the server.
+7. Import/export questions as JSON (client-side file → validates shape → creates through the API one by one with a progress bar and a failure report) – only if it works with the existing endpoints; otherwise skip it and mention it.
+8. Tests: AdminRoute blocks students, form validation, create/edit/delete flows with mocked API, table filters.
+
+Acceptance criteria:
+- Admin can add a question and immediately see it in the Question Bank and in newly generated interviews. Student cannot open /admin.
+- Tests pass (real output).
+```
+
+---
+
+## PHASE 11 – Communication training, polish, performance and final QA
+
+**How it works:** adds the communication practice area from the product description (self-introduction, STAR practice, filler-word drills, daily challenge) using the existing interview engine, then hardens the whole app.
+
+**How it should behave:** communication drills reuse the same answer/evaluation services (no duplicate engines); the final QA pass removes every rough edge.
+
+```
+PHASE 11 – COMMUNICATION PRACTICE, POLISH & FINAL QA
+
+Tasks – Communication practice (reuse existing services; no new endpoints):
+1. Page /practice with cards: Self-introduction, STAR method practice (Situation/Task/Action/Result guided inputs that are combined into the answer; scorer checks all four parts), Filler-word reduction drill (short prompt, shows filler count live in voice mode or after typing), Speaking-pace drill (voice only, shows wpm vs ideal band), Daily speaking challenge (one rotating prompt per day chosen from the communication-category questions, with a streak counter stored locally).
+2. Each drill creates a normal "communication" interview of 1 question through the existing flow (online or offline) so results appear in reports and progress. Show improvement tips specific to the drill.
+
+Tasks – Polish & performance:
+3. Route-level code splitting verified, bundle analysis (report size), lazy load recharts and heavy pages, image/icon optimisation, memoisation only where measured.
+4. Remove duplicated components/styles/constants; ensure no hardcoded categories/roles/skills/questions outside seeds and mocks; ensure all API calls live in services.
+5. Accessibility audit: keyboard-only walkthrough of the main flows, focus management in modals, labels, contrast in both themes, reduced motion. Fix findings.
+6. Responsive audit at 360, 768, 1024, 1440 widths for every page. Fix overflow/alignment issues.
+7. Error handling audit: simulate 401, 403, 404, 500, timeout, offline on each page and confirm friendly messages and no blank screens.
+8. Console audit: zero errors and zero React warnings in a full click-through.
+9. Documentation: docs/PROJECT_ARCHITECTURE.md (frontend part), docs/DEVELOPMENT_GUIDE.md (how to run with mock vs real backend, env variables, folder conventions, how to add a new category/role/language/page/setting), README frontend section, user manual (docs/USER_MANUAL.md with screenshots placeholders replaced by step lists), and a "known limitations" section (voice needs internet in most browsers, resume needs server, etc.).
+10. Final test run: all unit/component tests, build, preview build (`npm run preview`) and a manual end-to-end script: guest start → offline interview → report → go online → sync; register → resume upload → generate questions → voice interview (Chrome) → report PDF → progress → settings → language switch → delete data.
+
+Acceptance criteria:
+- Lighthouse (PWA + Accessibility + Performance) results reported honestly with numbers.
+- Whole app usable offline for the core interview flow.
+- All tests and build pass (real output). List any open issues clearly.
+```
+
+---
+
+# PART C – FRONTEND CHECKLIST
+
+| Phase | Scope | Done |
+|---|---|---|
+| 0 | Foundation, design system, API switch | ☐ |
+| 1 | Auth, guest mode, guards | ☐ |
+| 2 | Dashboard | ☐ |
+| 3 | Question bank + setup wizard + readiness check | ☐ |
+| 4 | Interview (text) | ☐ |
+| 5 | Offline engine, local scoring, sync | ☐ |
+| 6 | Results, reports, progress | ☐ |
+| 7 | Notes + Resume | ☐ |
+| 8 | Voice mode | ☐ |
+| 9 | Profile, Settings, i18n, data management | ☐ |
+| 10 | Admin | ☐ |
+| 11 | Communication practice, polish, QA | ☐ |
+
+# PART D – SWITCHING FROM MOCK TO REAL BACKEND (do this when the backend is ready)
+
+```
+The backend is ready at <URL>. Switch from mock to real API:
+1. Set VITE_USE_MOCK=false and VITE_API_URL=<URL>/api.
+2. Run through every screen and compare each request/response with 00_SHARED_API_CONTRACT.md. List every mismatch (path, field name, enum, status code, response shape).
+3. Fix mismatches in the frontend services only if the contract says so; if the backend deviates from the contract, report it to me instead of working around it.
+4. Re-run the full manual end-to-end script and the tests, and show real results.
+```
+
+# PART E – REUSABLE "FIX" PROMPTS
+
+**When a phase has errors:**
+```
+This phase has this problem: <paste exact error / console message / screenshot description>. Find the root cause, fix only what is necessary, do not change unrelated files or the API contract, re-run build and tests and show real output.
+```
+
+**For a UI change only:**
+```
+UI change only: <describe>. Keep the existing design system, colours and components. Change only the necessary frontend files, no API or backend changes, keep it responsive and accessible, and make sure every interaction still works.
+```
+
+**To add a new feature later:**
+```
+New feature: <describe>. First check whether something similar already exists. Tell me which files you will change, whether an API change is needed (if yes, stop and show the contract change first), then implement it with loading/empty/error/success states, i18n keys, offline behaviour and tests. Report what changed.
+```

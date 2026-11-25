@@ -1,0 +1,52 @@
+{
+  "info": {
+    "name": "TalkReady API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {"key":"baseUrl","value":"http://127.0.0.1:5000"},
+    {"key":"token","value":""},
+    {"key":"interviewId","value":""},
+    {"key":"reportId","value":""},
+    {"key":"answerQuestionId","value":""}
+  ],
+  "item": [
+    {
+      "name":"Authentication",
+      "item":[
+        {
+          "name":"Register",
+          "request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/auth/register","body":{"mode":"raw","raw":"{\"name\":\"Postman User\",\"email\":\"postman@example.com\",\"password\":\"Password1\"}"}},
+          "event":[{"listen":"test","script":{"exec":["const body=pm.response.json(); if(body.data&&body.data.token){pm.collectionVariables.set('token',body.data.token);} pm.test('Registered',()=>pm.response.to.have.status(201));"]}}]
+        },
+        {
+          "name":"Login",
+          "request":{"method":"POST","header":[{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/auth/login","body":{"mode":"raw","raw":"{\"email\":\"postman@example.com\",\"password\":\"Password1\"}"}},
+          "event":[{"listen":"test","script":{"exec":["const body=pm.response.json(); pm.collectionVariables.set('token',body.data.token); pm.test('Logged in',()=>pm.response.to.have.status(200));"]}}]
+        },
+        {"name":"Me","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/auth/me"}}
+      ]
+    },
+    {
+      "name":"Interview Flow",
+      "item":[
+        {"name":"Profile","request":{"method":"PUT","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/profile","body":{"mode":"raw","raw":"{\"careerGoal\":\"Backend engineer\",\"skills\":[\"Node.js\",\"JavaScript\"]}"}}},
+        {"name":"Generate Questions","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/questions/generate","body":{"mode":"raw","raw":"{\"count\":5,\"category\":\"technical\",\"difficulty\":\"medium\",\"language\":\"en\"}"}}},
+        {
+          "name":"Create Interview",
+          "request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/interviews","body":{"mode":"raw","raw":"{\"duration\":5,\"questionCount\":5,\"category\":\"technical\",\"difficulty\":\"medium\",\"language\":\"en\",\"jobRole\":\"Software Engineer\"}"}},
+          "event":[{"listen":"test","script":{"exec":["const body=pm.response.json(); pm.collectionVariables.set('interviewId',body.data.id); if(body.data.questions&&body.data.questions.length){pm.collectionVariables.set('answerQuestionId',body.data.questions[0].questionId);} pm.test('Interview created',()=>pm.response.to.have.status(201));"]}}]
+        },
+        {"name":"Start Interview","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/interviews/{{interviewId}}/start"}},
+        {"name":"Submit Answer","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/answers","body":{"mode":"raw","raw":"{\"interviewId\":\"{{interviewId}}\",\"questionId\":\"{{answerQuestionId}}\",\"answerText\":\"I identified the problem, chose a solution, validated it with tests, and measured the result.\",\"status\":\"answered\"}"}}},
+        {"name":"Complete Interview","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/interviews/{{interviewId}}/complete"}},
+        {"name":"Evaluate Interview","request":{"method":"POST","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/interviews/{{interviewId}}/evaluate"}},
+        {"name":"List Reports","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/reports"},"event":[{"listen":"test","script":{"exec":["const body=pm.response.json(); if(body.data&&body.data.length){pm.collectionVariables.set('reportId',body.data[0].id);} pm.test('Report exists',()=>pm.expect(body.data.length).to.be.above(0));"]}}]},
+        {"name":"Get Report","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/reports/{{reportId}}"}},
+        {"name":"Download PDF","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/reports/{{reportId}}/download"}},
+        {"name":"Progress","request":{"method":"GET","header":[{"key":"Authorization","value":"Bearer {{token}}"}],"url":"{{baseUrl}}/api/reports/progress?period=week"}},
+        {"name":"Delete Learning Data","request":{"method":"DELETE","header":[{"key":"Authorization","value":"Bearer {{token}}"},{"key":"Content-Type","value":"application/json"}],"url":"{{baseUrl}}/api/settings/data","body":{"mode":"raw","raw":"{\"confirm\":\"DELETE\"}"}}}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+[
+  { "key": "hr", "label": "HR", "description": "People, culture, goals, and workplace behavior" },
+  { "key": "technical", "label": "Technical", "description": "Technical knowledge and system understanding" },
+  { "key": "general", "label": "General", "description": "General interview and career awareness" },
+  { "key": "communication", "label": "Communication", "description": "Clear verbal and written communication" },
+  { "key": "coding", "label": "Coding", "description": "Algorithms, data structures, and implementation" }
+]

@@ -1,0 +1,67 @@
+[
+  {
+    "key": "hr-base",
+    "text": "Tell me about a workplace conflict you handled and the result.",
+    "category": "hr",
+    "skill": "Communication",
+    "difficulty": "medium",
+    "language": "en",
+    "expectedAnswer": "Describe the situation, your actions, the perspectives you considered, and the measurable or observable result.",
+    "keywords": ["situation", "action", "result", "listen", "resolve"],
+    "tags": ["hr", "conflict", "behaviour"],
+    "evaluationCriteria": ["Uses a specific example", "Explains personal actions", "States a result"],
+    "timeLimitSeconds": 180
+  },
+  {
+    "key": "technical-base",
+    "text": "Explain a technical concept from your experience and describe its practical use.",
+    "category": "technical",
+    "skill": "Problem Solving",
+    "difficulty": "medium",
+    "language": "en",
+    "expectedAnswer": "Define the concept, explain why it matters, and connect it to a real implementation or scenario.",
+    "keywords": ["define", "example", "tradeoff", "implementation", "benefit"],
+    "tags": ["technical", "concept"],
+    "evaluationCriteria": ["Clear definition", "Relevant example", "Tradeoffs explained"],
+    "timeLimitSeconds": 180
+  },
+  {
+    "key": "general-base",
+    "text": "What steps would you take to solve a completely unfamiliar problem?",
+    "category": "general",
+    "skill": "Problem Solving",
+    "difficulty": "easy",
+    "language": "en",
+    "expectedAnswer": "Clarify requirements, break down the problem, research, test a small solution, and review results.",
+    "keywords": ["clarify", "break down", "research", "test", "review"],
+    "tags": ["general", "problem-solving"],
+    "evaluationCriteria": ["Structured approach", "Learning mindset", "Verification"],
+    "timeLimitSeconds": 120
+  },
+  {
+    "key": "communication-base",
+    "text": "How would you explain a complex idea to someone with no technical background?",
+    "category": "communication",
+    "skill": "Communication",
+    "difficulty": "medium",
+    "language": "en",
+    "expectedAnswer": "Use plain language, a familiar analogy, simple examples, and check understanding.",
+    "keywords": ["plain", "analogy", "example", "audience", "confirm"],
+    "tags": ["communication", "explanation"],
+    "evaluationCriteria": ["Adapts to audience", "Uses simple structure", "Checks understanding"],
+    "timeLimitSeconds": 150
+  },
+  {
+    "key": "coding-base",
+    "text": "Explain how you would solve a coding problem and verify its correctness.",
+    "category": "coding",
+    "skill": "DSA",
+    "difficulty": "hard",
+    "language": "en",
+    "expectedAnswer": "State assumptions, choose an algorithm, explain complexity, and define test cases including edge cases.",
+    "keywords": ["algorithm", "complexity", "edge", "test", "correctness"],
+    "tags": ["coding", "algorithms"],
+    "evaluationCriteria": ["Valid approach", "Complexity analysis", "Edge-case testing"],
+    "timeLimitSeconds": 240
+  }
+]

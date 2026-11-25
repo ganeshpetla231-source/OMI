@@ -356,15 +356,15 @@ Acceptance criteria:
 
 | Phase | Endpoints | Done |
 |---|---|---|
-| 0 Foundation | 54, 55 | ☐ |
-| 1 Auth | 1–5 | ☐ |
-| 2 Profile & Settings | 6–10, 47–49 | ☐ |
-| 3 Questions & Admin | 15–21, 50–53 | ☐ |
-| 4 Interviews | 22–29 | ☐ |
-| 5 Answers & Scoring | 30–34 | ☐ |
-| 6 Notes & Resume | 35–42 (+35b) | ☐ |
-| 7 Reports & Dashboard | 11–14, 43–46 | ☐ |
-| 8 Hardening & Docs | all | ☐ |
+| 0 Foundation | 54, 55 | ☑ |
+| 1 Auth | 1–5 | ☑ |
+| 2 Profile & Settings | 6–10, 47–49 | ☑ |
+| 3 Questions & Admin | 15–21, 50–53 | ☑ |
+| 4 Interviews | 22–29 | ☑ |
+| 5 Answers & Scoring | 30–34 | ☑ |
+| 6 Notes & Resume | 35–42 (+35b) | ☑ |
+| 7 Reports & Dashboard | 11–14, 43–46 | ☑ |
+| 8 Hardening & Docs | all | ☑ |
 
 # PART D – REUSABLE "FIX" PROMPTS
 

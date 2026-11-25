@@ -1,0 +1,8 @@
+[
+  { "key": "java-developer", "label": "Java Developer" },
+  { "key": "python-developer", "label": "Python Developer" },
+  { "key": "web-developer", "label": "Web Developer" },
+  { "key": "software-engineer", "label": "Software Engineer" },
+  { "key": "data-analyst", "label": "Data Analyst" },
+  { "key": "general-fresher", "label": "General/Fresher" }
+]

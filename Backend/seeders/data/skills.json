@@ -1,0 +1,14 @@
+[
+  { "key": "java", "label": "Java", "jobRoles": ["Java Developer", "Software Engineer"] },
+  { "key": "oop", "label": "OOP", "jobRoles": ["Java Developer", "Python Developer", "Software Engineer"] },
+  { "key": "python", "label": "Python", "jobRoles": ["Python Developer", "Data Analyst"] },
+  { "key": "javascript", "label": "JavaScript", "jobRoles": ["Web Developer"] },
+  { "key": "react", "label": "React", "jobRoles": ["Web Developer"] },
+  { "key": "nodejs", "label": "Node.js", "jobRoles": ["Web Developer", "Software Engineer"] },
+  { "key": "sql", "label": "SQL", "jobRoles": ["Data Analyst", "Software Engineer"] },
+  { "key": "dsa", "label": "DSA", "jobRoles": ["Software Engineer", "Java Developer", "Python Developer"] },
+  { "key": "html-css", "label": "HTML/CSS", "jobRoles": ["Web Developer"] },
+  { "key": "git", "label": "Git", "jobRoles": ["Software Engineer", "Web Developer"] },
+  { "key": "communication", "label": "Communication", "jobRoles": ["General/Fresher", "Software Engineer"] },
+  { "key": "problem-solving", "label": "Problem Solving", "jobRoles": ["General/Fresher", "Software Engineer"] }
+]

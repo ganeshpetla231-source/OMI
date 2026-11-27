@@ -430,18 +430,20 @@ Acceptance criteria:
 
 | Phase | Scope | Done |
 |---|---|---|
-| 0 | Foundation, design system, API switch | ☐ |
-| 1 | Auth, guest mode, guards | ☐ |
-| 2 | Dashboard | ☐ |
-| 3 | Question bank + setup wizard + readiness check | ☐ |
-| 4 | Interview (text) | ☐ |
-| 5 | Offline engine, local scoring, sync | ☐ |
-| 6 | Results, reports, progress | ☐ |
-| 7 | Notes + Resume | ☐ |
-| 8 | Voice mode | ☐ |
-| 9 | Profile, Settings, i18n, data management | ☐ |
-| 10 | Admin | ☐ |
-| 11 | Communication practice, polish, QA | ☐ |
+| 0 | Foundation, design system, API switch | ☑ |
+| 1 | Auth, guest mode, guards | ☑ |
+| 2 | Dashboard | ☑ |
+| 3 | Question bank + setup wizard + readiness check | ☑ |
+| 4 | Interview (text) | ☑ |
+| 5 | Offline engine, local scoring, sync | ☑ |
+| 6 | Results, reports, progress | ☑ |
+| 7 | Notes + Resume | ☑ |
+| 8 | Voice mode | ☑ |
+| 9 | Profile, Settings, i18n, data management | ☑ |
+| 10 | Admin | ☑ |
+| 11 | Communication practice, polish, QA | ☑ |
+
+Implementation is complete for Phases 0–11. Remaining external validation: real-backend end-to-end flows, Lighthouse measurements, full keyboard/reduced-motion accessibility audit, and voice hardware checks. See `docs/DEVELOPMENT_GUIDE.md` for the latest verification record.
 
 # PART D – SWITCHING FROM MOCK TO REAL BACKEND (do this when the backend is ready)
 

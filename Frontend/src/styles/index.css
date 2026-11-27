@@ -1,0 +1,78 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-optical-sizing: auto;
+  scroll-behavior: smooth;
+}
+
+html,
+body,
+#root {
+  min-width: 320px;
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  @media print {
+    [data-print-hide],
+    .no-print {
+      display: none !important;
+    }
+
+    body,
+    #root {
+      min-width: 0;
+      background: white !important;
+      color: black !important;
+    }
+
+    .report-page {
+      max-width: none !important;
+      padding: 0 !important;
+    }
+
+    .report-header {
+      display: block !important;
+    }
+
+    .report-page section,
+    .report-page details,
+    .report-page article {
+      break-inside: avoid;
+      box-shadow: none !important;
+    }
+
+    .report-page details > * {
+      display: block !important;
+    }
+  }
+}
